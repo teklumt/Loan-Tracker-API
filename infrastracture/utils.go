@@ -108,7 +108,7 @@ func SendResetLink(email, token string) error {
 	m.SetHeader("Subject", "Password Reset Link")
 
 
-	m.SetBody("text/html", fmt.Sprintf("Click <a href=\"http://127.0.0.1:8080/auth/reset-password/%s\">here</a> to reset your password.", token))
+	m.SetBody("text/html", fmt.Sprintf("Click <a href=\"http://127.0.0.1:8080/users/reset-password/%s\">here</a> to reset your password.", token))
 
 
 	d := gomail.NewDialer("smtp.gmail.com", 587, "bereket.meng@gmail.com", "xjbs vduu hkjd lqlf")
