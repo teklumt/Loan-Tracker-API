@@ -193,6 +193,6 @@ The Loan Tracker API allows users to register, log in, apply for loans, and mana
 
 ## 📚 Documentation
 
-- **API Documentation:** Available on Postman [here](soon).
+- **API Documentation:** Available on Postman [here](https://documenter.getpostman.com/view/32898780/2sAXjGdEjE).
 
 This API enables a secure and scalable loan management system with user and admin functionalities, built on Golang with the Gin framework and MongoDB.
