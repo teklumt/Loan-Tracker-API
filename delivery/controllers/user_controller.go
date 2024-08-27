@@ -4,6 +4,7 @@ import (
 	"loan-tracker-api/domain"
 	"loan-tracker-api/infrastracture"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -118,7 +119,21 @@ func (u *UserController)GetMyProfile(c *gin.Context) {
 }
 
 func (u *UserController) GetUsers(c *gin.Context) {
-	users, err := u.UserUsecase.GetUsers()
+	byName := c.Query("name")
+	limit := c.Query("limit") 
+	page := c.Query("page")
+	if limit == "" {
+		limit = "10"
+
+	}
+	if page == "" {
+		page = "1"
+	}
+
+
+
+
+	users, err := u.UserUsecase.GetUsers( byName, limit, page)
 	if err.Message != "" {
 		c.JSON(err.StatusCode, err)
 		return
@@ -126,7 +141,11 @@ func (u *UserController) GetUsers(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"code": 200,
+		"message": "Users fetched successfully",
 		"data": users,
+
+		"quantity": strconv.Itoa(len(users)) + "/" + limit,
+		"current_page": page,
 	})
 }
 

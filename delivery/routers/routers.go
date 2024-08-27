@@ -9,8 +9,9 @@ func SetupRouter() *gin.Engine {
     router := gin.Default()
 
     setUpAuthRoutes(router)
-    setUpAuthUserRoutes(router)
-    setUpAuthAdminRoutes(router)
+    setUpUserRoutes(router)
+    setUpAdminRoutes(router)
+    setUpLoanRoutes(router)
     
 
 

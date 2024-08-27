@@ -1,63 +1,198 @@
-# 🧪 Teasted Clean Architecture RESTful API with a MongoDB Database and JWT User Authentication
+# 📑 Loan Tracker API - Documentation
 
-This repository contains a backend RESTful API built using the principles of Clean Architecture in Go with the Gin web framework and MongoDB as the database.
+The Loan Tracker API is a backend service developed in Golang using the Gin framework. It enables users to apply for loans and provides admin functionalities for managing users and loans. The API follows clean architecture principles and uses MongoDB as the database. Below is the documentation of the API endpoints, including user and admin functionalities.
 
-## ✨ Features
+## 🌐 Overview
 
-- 👤 **User Management**: Register, login, and manage user profiles with role-based access control.
-- 📝 **Task Management**: Create, read, update, and delete tasks, with personal and admin views.
-- 🔒 **Secure**: Authentication and authorization using middleware.
-- ⚙️ **Scalable and Maintainable**: Separation of concerns with clear boundaries between different layers of the application.
+The Loan Tracker API allows users to register, log in, apply for loans, and manage their accounts. Admins can manage users and loans, ensuring efficient handling of data and system settings. The API is designed to be secure, efficient, and scalable.
 
-## 📚 API Documentation
+## 🔗 Base URL
 
-For detailed API endpoints and usage instructions, please refer to the [API Documentation](https://documenter.getpostman.com/view/32898780/2sA3s1oruU).
+- **Production:** `https://api.loantracker.com`
+- **Development:** `http://localhost:8080`
 
-## ⚙️ Installation and Setup
+## 🛠 Endpoints
 
-### ✅ Prerequisites
+### 👤 1. User Management
 
-- 🐹 Go 1.16+
-- 🍃 MongoDB instance
+#### 📝 User Registration
 
-### 🛠️ Installation
+- **Endpoint:** `POST /users/register`
+- **Description:** Register a new user with email, password, and profile details.
+- **Request Body:**
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "password123",
+    "first_name": "John",
+    "last_name": "Doe"
+  }
+  ```
+- **Response:**
+  - **Status Code:** `201 Created`
+  - **Body:**
+  ```json
+  {
+    "status_code": 201,
+    "message": "Registration successful. Please verify your email."
+  }
+  ```
 
-1. **Clone the repository**:
+#### ✅ Email Verification
 
-   ```bash
-   git clone https://github.com/teklumt/A2SV-Backend-Tasks-2024.git
-   cd A2SV-Backend-Tasks-2024/Task7-%20Clean%20Architecture
-   ```
+- **Endpoint:** `GET /users/verify-email`
+- **Description:** Verify the user's email address using a token sent to their email.
+- **Query Parameters:**
+  - `token`: Verification token sent via email
+  - `email`: User's email address
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "message": "Email verified successfully."
+  }
+  ```
 
-2. **Install dependencies**:
+#### 🔑 User Login
 
-   ```bash
-   go mod tidy
-   ```
+- **Endpoint:** `POST /users/login`
+- **Description:** Authenticate user and provide access and refresh tokens.
+- **Request Body:**
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "password123"
+  }
+  ```
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "access_token": "jwt-access-token",
+    "refresh_token": "jwt-refresh-token"
+  }
+  ```
 
-3. **Setup environment variables**:
+#### 🔄 Token Refresh
 
-   - Create a `.env` file in the root directory.
-   - Add the necessary environment variables such as MongoDB URI.
+- **Endpoint:** `POST /users/token/refresh`
+- **Description:** Refresh access token using the refresh token.
+- **Request Body:**
+  ```json
+  {
+    "refresh_token": "jwt-refresh-token"
+  }
+  ```
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "access_token": "new-jwt-access-token"
+  }
+  ```
 
-4. **Run the application**:
-   ```bash
-   go run main.go
-   ```
+#### 🛂 User Profile
 
-## 🚀 Usage
+- **Endpoint:** `GET /users/profile`
+- **Description:** Retrieve the authenticated user profile.
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe"
+  }
+  ```
 
-- **User Operations**:
+#### 🔒 Password Reset Request
 
-  - `GET /users`: Get all users (Admin only) 👨‍💻.
-  - `GET /users/:id`: Get a user by ID 🆔.
-  - `GET /users/me`: Get the authenticated user's profile 🧑‍💼.
-  - `DELETE /users/:id`: Delete a user by ID ❌.
+- **Endpoint:** `POST /users/password-reset`
+- **Description:** Send password reset link to the user's email.
+- **Request Body:**
+  ```json
+  {
+    "email": "user@example.com"
+  }
+  ```
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "message": "Password reset link sent."
+  }
+  ```
 
-- **Task Operations**:
-  - `POST /tasks`: Create a new task ➕.
-  - `GET /tasks`: Get all tasks (Admin only) 📄.
-  - `GET /tasks/:id`: Get a task by ID 🆔.
-  - `GET /tasks/me`: Get tasks assigned to the authenticated user 🗒️.
-  - `DELETE /tasks/:id`: Delete a task by ID ❌.
-  - `PUT /tasks/:id`: Update a task by ID ✏️.
+#### 🔑 Password Update After Reset
+
+- **Endpoint:** `POST /users/password-update`
+- **Description:** Update the user's password using the token received in the password reset email.
+- **Request Body:**
+  ```json
+  {
+    "token": "reset-token",
+    "new_password": "newpassword123"
+  }
+  ```
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "message": "Password updated successfully."
+  }
+  ```
+
+### 🛠 2. Admin Functionalities
+
+#### 👥 View All Users
+
+- **Endpoint:** `GET /admin/users`
+- **Description:** Retrieve a list of all users.
+- **Response:**
+  - **Status Code:** `200 OK`
+  - **Body:**
+  ```json
+  {
+    "status_code": 200,
+    "users": [
+      {
+        "email": "user1@example.com",
+        "first_name": "John",
+        "last_name": "Doe"
+      },
+      ...
+    ]
+  }
+  ```
+
+#### 🗑 Delete User Account
+
+- **Endpoint:** `DELETE /admin/users/{id}`
+- **Description:** Delete a specific user account.
+- **Response:**
+  - **Status Code:** `204 No Content`
+  - **Body:**
+  ```json
+  {
+    "status_code": 204,
+    "message": "User account deleted successfully."
+  }
+  ```
+
+## 📚 Documentation
+
+- **API Documentation:** Available on Postman [here](https://documenter.getpostman.com/view/32898780/2sAXjGdEjE).
+
+This API enables a secure and scalable loan management system with user and admin functionalities, built on Golang with the Gin framework and MongoDB.

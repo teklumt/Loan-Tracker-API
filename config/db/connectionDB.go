@@ -11,9 +11,9 @@ import (
 )
 
 var Client *mongo.Client
-var TaskCollection *mongo.Collection
+var LoanCollection *mongo.Collection
 var UserCollection *mongo.Collection
-
+var LogCollection *mongo.Collection
 func ConnectDB(connectionString string) {
 
     clientOptions := options.Client().ApplyURI(connectionString)
@@ -33,7 +33,7 @@ func ConnectDB(connectionString string) {
     }
 
     Client = client
-    // TaskCollection = client.Database("clean_architecture").Collection("tasks")
-    // UserCollection = client.Database(" clean_architecture").Collection("users")
     UserCollection = client.Database("loan_tracker_api").Collection("users")
+    LoanCollection = client.Database("loan_tracker_api").Collection("loans")
+    LogCollection = client.Database("loan_tracker_api").Collection("logs")
 }

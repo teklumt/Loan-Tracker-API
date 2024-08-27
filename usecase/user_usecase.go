@@ -11,13 +11,17 @@ type UserUsecase struct {
 	UserRepo       domain.UserRepository
 	TokenGen       domain.TokenGenerator
 	PasswordSvc    domain.PasswordService
+	LogRepo        domain.LogRepository
 }
 
-func NewUserUsecase(userRepo domain.UserRepository, tokenGen domain.TokenGenerator, passwordSvc domain.PasswordService) domain.UserUsecase {
+func NewUserUsecase(userRepo domain.UserRepository, tokenGen domain.TokenGenerator, passwordSvc domain.PasswordService,LogRepo domain.LogRepository ) domain.UserUsecase {
 	return &UserUsecase{
 		UserRepo:    userRepo,
 		TokenGen:    tokenGen,
 		PasswordSvc: passwordSvc,
+		LogRepo:     LogRepo,
+
+
 	}
 }
 
@@ -95,97 +99,109 @@ func (u *UserUsecase) AccountActivation(email, token string) domain.ErrorRespons
 }
 
 func (u *UserUsecase) Login(user *domain.User, deviceID string) (domain.LogInResponse, domain.ErrorResponse) {
-	if u.UserRepo == nil || u.PasswordSvc == nil || u.TokenGen == nil {
-		log.Fatal("Necessary services are nil")
-		return domain.LogInResponse{},  domain.ErrorResponse{StatusCode: 500, Message: "Internal server error"}
-	}
+    if u.UserRepo == nil || u.PasswordSvc == nil || u.TokenGen == nil {
+        log.Fatal("Necessary services are nil")
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Internal server error"}
+    }
 
-	existingUser, err := u.UserRepo.Login(user)
-	if err != nil {
-		return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "Invalid credentials"}
-	}
+    existingUser, err := u.UserRepo.Login(user)
+    if err != nil {
+        // Log failed login attempt
+        u.LogRepo.CreateLog(domain.SystemLog{
+            Timestamp: time.Now().String(),
+            Event:     "Login Attempt",
+            Details:   "Failed login attempt for user " + user.Email,
+        })
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "Invalid credentials"}
+    }
 
-	if !u.PasswordSvc.CheckPasswordHash(user.Password, existingUser.Password) {
-		return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "Invalid credentials"}
-	}
+    if !u.PasswordSvc.CheckPasswordHash(user.Password, existingUser.Password) {
+        // Log failed login attempt
+        u.LogRepo.CreateLog(domain.SystemLog{
+            Timestamp: time.Now().String(),
+            Event:     "Login Attempt",
+            Details:   "Failed login attempt for user " + user.Email,
+        })
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "Invalid credentials"}
+    }
 
-	if !existingUser.IsActive {
+    // Log successful login attempt
+    u.LogRepo.CreateLog(domain.SystemLog{
+        Timestamp: time.Now().String(),
+        Event:     "Login Attempt",
+        Details:   "User " + user.Email + " logged in successfully",
+    })
 
-		token, err := infrastracture.GenerateActivationToken()
-		if err != nil {
-			return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to generate activation token"}
-		}
+    if !existingUser.IsActive {
+        token, err := infrastracture.GenerateActivationToken()
+        if err != nil {
+            return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to generate activation token"}
+        }
 
-		existingUser, err := u.UserRepo.GetUserByEmail(user.Email) 
-		
-		existingUser.ActivationToken = token
-		existingUser.TokenCreatedAt = time.Now()
+        existingUser, err := u.UserRepo.GetUserByEmail(user.Email)
+        if err != nil {
+            return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "User not found"}
+        }
 
-		err = u.UserRepo.UpdateUser(&existingUser)
+        existingUser.ActivationToken = token
+        existingUser.TokenCreatedAt = time.Now()
 
-		if err != nil {
-			return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to create user account"}
-		}
+        err = u.UserRepo.UpdateUser(&existingUser)
+        if err != nil {
+            return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to create user account"}
+        }
 
-		// Send activation email or link to the user
-		err = infrastracture.SendActivationEmail(user.Email, token)
-		if err != nil {
-			return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to send activation email"}
-		}
+        // Send activation email or link to the user
+        err = infrastracture.SendActivationEmail(user.Email, token)
+        if err != nil {
+            return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to send activation email"}
+        }
 
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "Account is not activated yet. Please check your email for activation link."}
+    }
 
-		return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 400, Message: "Account is not activated yet. Please check your email for activation link."}
+    refreshToken, err := u.TokenGen.GenerateRefreshToken(*existingUser)
+    if err != nil {
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to generate refresh token"}
+    }
 
+    newRefreshToken := domain.RefreshToken{
+        Token:     refreshToken,
+        DeviceID:  deviceID,
+        CreatedAt: time.Now(),
+    }
 
-	}
+    for i, rt := range existingUser.RefreshTokens {
+        if rt.DeviceID == deviceID {
+            existingUser.RefreshTokens = append(existingUser.RefreshTokens[:i], existingUser.RefreshTokens[i+1:]...)
+            break
+        }
+    }
 
+    existingUser.RefreshTokens = append(existingUser.RefreshTokens, newRefreshToken)
 
-	refreshToken, err := u.TokenGen.GenerateRefreshToken(*existingUser)
-	if err != nil {
-		return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to generate refresh token"}
-	}
+    err = u.UserRepo.UpdateUser(existingUser)
+    if err != nil {
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to update user"}
+    }
 
-	newRefreshToken := domain.RefreshToken{
-		Token:     refreshToken,
-		DeviceID:  deviceID,
-		CreatedAt: time.Now(),
-	}
+    accessToken, err := u.TokenGen.GenerateToken(*existingUser)
+    if err != nil {
+        return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to generate access token"}
+    }
 
-	for i, rt := range existingUser.RefreshTokens {
-		if rt.DeviceID == deviceID {
-			existingUser.RefreshTokens = append(existingUser.RefreshTokens[:i], existingUser.RefreshTokens[i+1:]...)
-			break
-		}
-	}
-
-	existingUser.RefreshTokens = append(existingUser.RefreshTokens, newRefreshToken)
-
-	err = u.UserRepo.UpdateUser(existingUser)
-	if err != nil {
-		return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to update user"}
-	}
-
-	accessToken, err := u.TokenGen.GenerateToken(*existingUser)
-	if err != nil {
-		return domain.LogInResponse{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to generate access token"}
-	}
-
-	
-
-	return domain.LogInResponse{
-		AccessToken:  accessToken,
-		RefreshToken: newRefreshToken.Token,
-
-		User:         domain.ReturnUser{
-			ID:       existingUser.ID,
-			Username: existingUser.Username,
-			Email:    existingUser.Email,
-			Role:     existingUser.Role,
-			CreatedAt: existingUser.CreatedAt,
-		},
-	}, domain.ErrorResponse{}
+    return domain.LogInResponse{
+        AccessToken:  accessToken,
+        RefreshToken: newRefreshToken.Token,
+        User: domain.ReturnUser{
+            ID:        existingUser.ID,
+            Username:  existingUser.Username,
+            Email:     existingUser.Email,
+            Role:      existingUser.Role,
+            CreatedAt: existingUser.CreatedAt,
+        },
+    }, domain.ErrorResponse{}
 }
-
 
 func (u *UserUsecase) RefreshToken(userID, deviceID, token string) (domain.RefreshTokenResponse, domain.ErrorResponse) {
 	user, err := u.UserRepo.GetUserByID(userID)
@@ -246,8 +262,8 @@ func(u *UserUsecase)GetMyProfile (userID string) (domain.ReturnUser, domain.Erro
 }
 
 
-func (u *UserUsecase) GetUsers() ([]domain.ReturnUser, domain.ErrorResponse) {
-	users, err := u.UserRepo.GetUsers()
+func (u *UserUsecase) GetUsers(byName, limit , page string) ([]domain.ReturnUser, domain.ErrorResponse) {
+	users, err := u.UserRepo.GetUsers( byName, limit , page)
 	if err != nil {
 		return []domain.ReturnUser{}, domain.ErrorResponse{StatusCode: 500, Message: "Failed to get users"}
 	}
@@ -319,11 +335,26 @@ func (u *UserUsecase) SendPasswordResetLink(email string) domain.ErrorResponse{
 func (u *UserUsecase) ResetPassword(token, newPassword string) domain.ErrorResponse {
 	user, err := u.UserRepo.GetUserByResetToken(token)
 	if err != nil {
+
+		u.LogRepo.CreateLog(domain.SystemLog{
+			Timestamp: time.Now().String(),
+			Event:     "Password Reset",
+			Details: "Failed password reset attempt",
+		})
+
+
+
 		return  domain.ErrorResponse{StatusCode: 400, Message: "Invalid reset token"}
 	}
 
 	hashedPassword, err := u.PasswordSvc.HashPassword(newPassword)
 	if err != nil {
+
+		u.LogRepo.CreateLog(domain.SystemLog{
+			Timestamp: time.Now().String(),
+			Event:     "Password Reset",
+			Details:  user.Email + "Failed password reset attempt",
+		})
 		return domain.ErrorResponse{StatusCode: 500, Message: "Failed to hash password"}
 	}
 
@@ -333,8 +364,15 @@ func (u *UserUsecase) ResetPassword(token, newPassword string) domain.ErrorRespo
 
 	err = u.UserRepo.UpdateUser(&user)
 	if err != nil {
+
 		return domain.ErrorResponse{StatusCode: 500, Message: "Failed to update user"}
 	}
+
+	u.LogRepo.CreateLog(domain.SystemLog{
+		Timestamp: time.Now().String(),
+		Event:     "Password Reset",
+		Details: user.Email +  "Password reset successful",
+	})
 
 	return domain.ErrorResponse{}
 }

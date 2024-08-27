@@ -110,24 +110,14 @@ type UserUsecase interface {
 	AccountActivation(token string, email string) ErrorResponse
 	Login(user *User, deviceID string) (LogInResponse, ErrorResponse)
 	RefreshToken(userID, deviceID, token string) (RefreshTokenResponse, ErrorResponse)
-	// GetUserByUsernameOrEmail(username, email string) (User, error)
-	// Logout(userID, deviceID, token string) error
-	// LogoutAllDevices(userID string) error
-	// LogoutDevice(userID, deviceID string) error
-	// GetDevices(userID string) ([]string, error)
-
-	// ActivateAccountMe(Email string) error
-
-	// // for google oauth
-	// OAuthLogin(oauthUserInfo OAuthUserInfo, deviceID string) (LogInResponse, error)
-
+	
 	// // reset password
 	ResetPassword(token, newPassword string) ErrorResponse
 	SendPasswordResetLink(email string) ErrorResponse
 
 
 	GetMyProfile(userID string) (ReturnUser, ErrorResponse)
-	GetUsers() ([]ReturnUser, ErrorResponse)
+	GetUsers(byName, limit , page string) ([]ReturnUser, ErrorResponse)
 	DeleteUser(userID string) (ReturnUser, ErrorResponse)
 	
 }
@@ -145,14 +135,14 @@ type UserRepository interface {
 	DeleteAllRefreshTokens(user *User) error
 
 	GetUserByID(id string) (User, error)
-	// FindOrCreateUserByGoogleID(oauthUserInfo OAuthUserInfo, deviceID string) (*User, error)
+	
 	GetUserByResetToken(token string) (User, error)
 
 	// // ActivateAccountMe(Email string) error
 
 	// // // for user profile
 	GetMyProfile(userID string) (User, error)
-	GetUsers() ([]User, error)
+	GetUsers(byName, limit , page string) ([]User, error)
 	DeleteUser(userID string) (User, error)
 
 	
