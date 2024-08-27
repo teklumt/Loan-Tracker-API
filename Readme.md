@@ -1,7 +1,3 @@
-Here's an updated version of the documentation that includes the environmental setup for the Loan Tracker API.
-
----
-
 # 📑 Loan Tracker API - Documentation
 
 The Loan Tracker API is a backend service developed in Golang using the Gin framework. It enables users to apply for loans and provides admin functionalities for managing users and loans. The API follows clean architecture principles and uses MongoDB as the database. Below is the documentation of the API endpoints, including user and admin functionalities, as well as the environmental setup required for development and deployment.
@@ -283,5 +279,3 @@ To run the API locally on your machine:
 This API enables a secure and scalable loan management system with user and admin functionalities, built on Golang with the Gin framework and MongoDB.
 
 ---
-
-This documentation provides a full overview of the Loan Tracker API, including the environmental setup needed for both development and production environments.
