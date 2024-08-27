@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"loan-tracker-api/domain"
+	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type UserRepositoryImpl struct {
@@ -137,21 +139,57 @@ func (ur *UserRepositoryImpl) GetMyProfile(userID string) (domain.User, error) {
 	return user, nil
 }
 
-
-func (ur *UserRepositoryImpl) GetUsers()([]domain.User, error){
+func (ur *UserRepositoryImpl) GetUsers(byName, limit, page string) ([]domain.User, error) {
 	var users []domain.User
-	cursor, err := ur.collection.Find(context.Background(), bson.M{})
+
+	// Build the query filter for name search if provided
+	filter := bson.M{}
+	if byName != "" {
+		filter = bson.M{"username": bson.M{"$regex": byName, "$options": "i"}} // Case-insensitive search
+	}
+
+	// Convert limit and page to int
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		return []domain.User{}, err
+	}
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		return []domain.User{}, err
+	}
+
+	// Set pagination options
+	options := options.Find()
+	options.SetLimit(int64(limitInt)) // Convert limitInt to int64
+	options.SetSkip(int64((pageInt - 1) * limitInt)) // Convert pageInt to int64 for skip calculation
+
+	// Query the database with the filter and pagination options
+	cursor, err := ur.collection.Find(context.Background(), filter, options)
 	if err != nil {
 		return []domain.User{}, err
 	}
 	defer cursor.Close(context.Background())
+
+	// Decode the results into the users slice
 	for cursor.Next(context.Background()) {
 		var user domain.User
-		cursor.Decode(&user)
+		if err := cursor.Decode(&user); err != nil {
+			return []domain.User{}, err
+		}
 		users = append(users, user)
 	}
+
+	// Check for any cursor errors after iteration
+	if err := cursor.Err(); err != nil {
+		return []domain.User{}, err
+	}
+
 	return users, nil
 }
+
+
+
 
 
 func (ur *UserRepositoryImpl) DeleteUser(id string) (domain.User, error) {

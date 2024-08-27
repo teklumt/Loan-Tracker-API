@@ -1,10 +1,91 @@
 # 📑 Loan Tracker API - Documentation
 
-The Loan Tracker API is a backend service developed in Golang using the Gin framework. It enables users to apply for loans and provides admin functionalities for managing users and loans. The API follows clean architecture principles and uses MongoDB as the database. Below is the documentation of the API endpoints, including user and admin functionalities.
+The Loan Tracker API is a backend service developed in Golang using the Gin framework. It enables users to apply for loans and provides admin functionalities for managing users and loans. The API follows clean architecture principles and uses MongoDB as the database. Below is the documentation of the API endpoints, including user and admin functionalities, as well as the environmental setup required for development and deployment.
 
 ## 🌐 Overview
 
 The Loan Tracker API allows users to register, log in, apply for loans, and manage their accounts. Admins can manage users and loans, ensuring efficient handling of data and system settings. The API is designed to be secure, efficient, and scalable.
+
+## ⚙️ Environmental Setup
+
+### 1. System Requirements
+
+- **Golang**: Version 1.18+
+- **MongoDB**: Version 4.4+
+- **Docker**: (For containerized deployment)
+- **Make**: (For build automation)
+
+### 2. Environment Variables
+
+You need to configure the following environment variables in a `.env` file at the root of your project. These are essential for connecting to the database, handling JWT authentication, and setting up server configuration.
+
+```plaintext
+# Server Configuration
+SERVER_PORT=8080
+SERVER_ENV=development
+
+# Database Configuration
+DB_URI=mongodb://localhost:27017
+DB_NAME=loan_tracker
+
+# JWT Configuration
+JWT_SECRET=mysecretkey
+JWT_EXPIRATION_HOURS=24
+
+# Admin Credentials (For Admin Access)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=adminpassword
+
+# Email Service Configuration (Optional, if using email verification and password reset)
+EMAIL_SERVICE=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USERNAME=email@example.com
+EMAIL_PASSWORD=your-email-password
+```
+
+### 3. Docker Setup
+
+A `Dockerfile` and `docker-compose.yml` are provided to easily set up the Loan Tracker API in a containerized environment. To build and run the application using Docker, follow these steps:
+
+1. **Build the Docker Image:**
+
+   ```bash
+   docker build -t loan-tracker-api .
+   ```
+
+2. **Run the Application with Docker Compose:**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+   This will start both the API and MongoDB in Docker containers.
+
+### 4. Running Locally
+
+To run the API locally on your machine:
+
+1. **Install Dependencies:**
+
+   ```bash
+   go mod tidy
+   ```
+
+2. **Run the Application:**
+
+   ```bash
+   go run main.go
+   ```
+
+3. The API should now be running at `http://localhost:8080`.
+
+### 5. Testing
+
+- **Unit Tests**: Run the following command to execute unit tests:
+
+  ```bash
+  go test ./...
+  ```
 
 ## 🔗 Base URL
 
@@ -196,3 +277,5 @@ The Loan Tracker API allows users to register, log in, apply for loans, and mana
 - **API Documentation:** Available on Postman [here](https://documenter.getpostman.com/view/32898780/2sAXjGdEjE).
 
 This API enables a secure and scalable loan management system with user and admin functionalities, built on Golang with the Gin framework and MongoDB.
+
+---
