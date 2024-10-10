@@ -25,8 +25,10 @@ func loadEnvVariables() *envConfigs {
 	var config envConfigs
 
 	viper.AddConfigPath(".")
+	// viper.AddConfigPath("cmd")
 	viper.SetConfigName("app")
 	viper.SetConfigType("env") 
+
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Error reading config file, %s", err)
