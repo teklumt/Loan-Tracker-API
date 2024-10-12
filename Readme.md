@@ -89,7 +89,7 @@ To run the API locally on your machine:
 
 ## 🔗 Base URL
 
-- **Production:** `https://api.loantracker.com`
+- **Production:** `Soon`
 - **Development:** `http://localhost:8080`
 
 ## 🛠 Endpoints
